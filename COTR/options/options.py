@@ -15,7 +15,7 @@ def set_general_arguments(parser):
     general_arg.add_argument('--confirm', type=str2bool,
                              default=True, help='promote confirmation for user')
     general_arg.add_argument('--use_cuda', type=str2bool,
-                             default=True, help='use cuda')
+                             default=False, help='use cuda')
     general_arg.add_argument('--use_cc', type=str2bool,
                              default=False, help='use computecanada')
 

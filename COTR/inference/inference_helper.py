@@ -306,6 +306,7 @@ try:
         render = render[..., :2]
         render *= np.array(to_shape[::-1])
         return render
-except:
+except Exception as e:
+    print(e)
     print('cannot use vispy, setting triangulate_corr as None')
     triangulate_corr = None

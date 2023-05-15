@@ -193,7 +193,7 @@ def safe_load_weights(model, saved_weights):
     print('weights safely loaded')
 
 
-def visualize_corrs(img1, img2, corrs, mask=None):
+def visualize_corrs(img1, img2, corrs, exp_name, mask=None):
     if mask is None:
         mask = np.ones(len(corrs)).astype(bool)
 
@@ -231,7 +231,7 @@ def visualize_corrs(img1, img2, corrs, mask=None):
         [0.0, 0.67, 0.0],
         [0.9, 0.1, 0.1],
     ]
-    lw = .5
+    lw = .25
     alpha = 1
 
     # Draw outliers
@@ -247,7 +247,7 @@ def visualize_corrs(img1, img2, corrs, mask=None):
         aa=False,
         color=cols[1],
     )
-    
+
 
     # Draw Inliers
     _x1 = x1[mask]
@@ -262,10 +262,80 @@ def visualize_corrs(img1, img2, corrs, mask=None):
         aa=False,
         color=cols[0],
     )
-    plt.scatter(xs, ys)
+
+    plt.scatter(xs, ys, s=lw * 10)
 
     fig.axes.get_xaxis().set_visible(False)
     fig.axes.get_yaxis().set_visible(False)
     ax = plt.gca()
     ax.set_axis_off()
-    plt.show()
+    
+    plt.savefig(f'saved_visualisations/{exp_name}.png')
+
+
+def save_visualized_corrs(img1, img2, corrs, exp_name, mask=None):
+    if mask is None:
+        mask = np.ones(len(corrs)).astype(bool)
+
+    scale1 = 1.0
+    scale2 = 1.0
+    if img1.shape[1] > img2.shape[1]:
+        scale2 = img1.shape[1] / img2.shape[1]
+        w = img1.shape[1]
+    else:
+        scale1 = img2.shape[1] / img1.shape[1]
+        w = img2.shape[1]
+    # Resize if too big
+    max_w = 400
+    if w > max_w:
+        scale1 *= max_w / w
+        scale2 *= max_w / w
+    img1 = cv2.resize(img1, (0, 0), fx=scale1, fy=scale1)
+    img2 = cv2.resize(img2, (0, 0), fx=scale2, fy=scale2)
+
+    x1, x2 = corrs[:, :2], corrs[:, 2:]
+    h1, w1 = img1.shape[:2]
+    h2, w2 = img2.shape[:2]
+    img = np.zeros((h1 + h2, max(w1, w2), 3), dtype=img1.dtype)
+    img[:h1, :w1] = img1
+    img[h1:, :w2] = img2
+    # Move keypoints to coordinates to image coordinates
+    x1 = x1 * scale1
+    x2 = x2 * scale2
+    # recompute the coordinates for the second image
+    x2p = x2 + np.array([[0, h1]])
+
+    cols = [
+        [0.0, 0.67, 0.0],
+        [0.1, 0.3, 0.7],
+    ]
+    lw = .5
+    alpha = 1
+
+    # Draw outliers
+    _x1 = x1[~mask]
+    _x2p = x2p[~mask]
+    xs = np.stack([_x1[:, 0], _x2p[:, 0]], axis=1).T
+    ys = np.stack([_x1[:, 1], _x2p[:, 1]], axis=1).T
+
+    assert xs.shape == ys.shape == (2,0), 'Solve this case'
+    assert len(xs) == len(ys) == 2, 'Solve this case'
+    
+
+    # Draw Inliers
+    _x1 = x1[mask]
+    _x2p = x2p[mask]
+    xs = np.stack([_x1[:, 0], _x2p[:, 0]], axis=1).T
+    ys = np.stack([_x1[:, 1], _x2p[:, 1]], axis=1).T
+    h, w, _ = img.shape
+    for i in range(xs.shape[1]):
+        x1, x2 = tuple(round(x) for x in xs[:,i])
+        y1, y2 = tuple(round(y) for y in ys[:,i])
+        c = tuple(round(x * 255) for x in cols[0])
+        cv2.line(img, (x1, y1), (x2, y2), color=c, thickness=2)
+
+        c2 = tuple(round(x * 255) for x in cols[1])
+        cv2.circle(img, (x1 ,y1), radius=3, color=c2, thickness=-1)
+        cv2.circle(img, (x2 ,y2), radius=3, color=c2, thickness=-1)
+
+    cv2.imwrite(f'saved_visualisations/{exp_name}.png', img[:,:,::-1])

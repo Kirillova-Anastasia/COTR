@@ -1,1 +1,4 @@
 *.pyc
+out/default.zip
+out/default/
+saved_corrs/
